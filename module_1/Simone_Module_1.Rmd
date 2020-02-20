@@ -1,0 +1,229 @@
+---
+title: "R Notebook - Data 608 Module 1"
+author: "Joseph Simone"
+output:
+  html_document:
+      highlight: pygments
+      theme: cerulean
+      toc: true
+  html_notebook: default
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.width=12, fig.height=8) 
+```
+
+<STYLE>
+table {
+    border: 1px solid black;
+}
+th {
+    background-color: rgb(12, 99, 204);
+    color: white;
+    font-weight: bold;
+    padding: 20px 30px;
+}
+tr:nth-child(even) {
+    background-color: rgb(220,220,220);
+}
+tr:nth-child(odd) {
+    background-color: rgb(184, 174, 174);
+}
+</STYLE>
+
+
+
+```{r, message=FALSE, warning= FALSE}
+library(ggplot2)
+library(tidyverse)
+library(tidyr)
+library(dplyr)
+library(knitr)
+library(grid)
+library(gridExtra)
+library(latex2exp)
+library(kableExtra)
+library(ggthemes)
+```
+
+
+**Principles of Data Visualization and Introduction to ggplot2**
+
+I have provided you with data about the 5,000 fastest growing companies in the US, as compiled by Inc. magazine. lets read this in:
+
+```{r}
+inc <- read.csv("https://raw.githubusercontent.com/charleyferrari/CUNY_DATA_608/master/module1/Data/inc5000_data.csv", header= TRUE)
+```
+
+And lets preview this data:
+
+```{r}
+head(inc)
+```
+```{r}
+summary(inc)
+```
+```{r}
+str(inc)
+```
+
+
+
+Think a bit on what these summaries mean. Use the space below to add some more relevant non-visual exploratory information you think helps you understand this data:
+
+### Data Exploration 
+
+Upon Examining the summary and data values of this set, it was time to dive deeper in and set apart some Catergories from the DataFrame. First, before answering the questions, let's explore the Revenue, Indrusties, Employees, Cities, and States that make up the Data Set regarading the 5,000 fastest growing companies in the US, as compiled by Inc. magazine.  
+
+#### Growth Rate 
+I was curious to see which companies experienced a growth rate of 100 or higher. This was due to the growth rate growth from 0.340 to 431.480. 
+
+```{r}
+inc %>% dplyr::filter(Growth_Rate >= 100) %>% summarise(n = n())
+```
+```{r}
+kable(inc %>% dplyr::filter(Growth_Rate >= 100)) %>% kable_styling()
+```
+There were 19 companies that experienced a growth rate of 100 or more. 
+
+#### Revenue 
+
+```{r}
+inc %>% dplyr::summarise(min=min(Revenue), median=median(Revenue), max=max(Revenue))
+```
+
+The revenue ranges from 2 million to about 10 billion. The median revenue is about 11 million.
+
+#### Industries
+
+```{r}
+kable(inc %>% dplyr::group_by(Industry) %>% dplyr::summarise(n=n()) %>% arrange(desc(n))) %>% kable_styling()
+```
+
+There are 25 distinct industries.
+
+#### Employees 
+
+```{r}
+kable(inc %>% dplyr::summarise(min=min(Employees, na.rm = TRUE), median=median(Employees, na.rm = TRUE), max=max(Employees, na.rm = TRUE))) %>% kable_styling()
+```
+
+The number of employees range from 1 to 66,803. The median employee size is 53. In addition, there are some companies whom have a total number of employees as zero. 
+
+#### Cities 
+
+```{r}
+citi <- inc %>% group_by(City) %>% summarise(n=n())
+nrow(citi)
+```
+There are 1,519 cities.
+
+We can oprder them by the top 10 cities, based on the number of companies located there.
+
+#### States
+
+```{r}
+states <- inc %>% group_by(State) %>% summarise(n=n())
+nrow(states)
+```
+
+52 States are included in this Data Set
+
+We can order this the same as the 10 cities with 10 states
+
+```{r}
+kable(inc %>% group_by(State) %>% summarise(n=n()) %>% arrange(desc(n)) %>% top_n(10)) %>% kable_styling()
+```
+
+
+```{r}
+kable(inc %>% group_by(City) %>% summarise(n=n()) %>% arrange(desc(n)) %>% top_n(10)) %>% kable_styling()
+```
+
+
+## Question 1
+
+Create a graph that shows the distribution of companies in the dataset by State (ie how many are in each state). There are a lot of States, so consider which axis you should use. This visualization is ultimately going to be consumed on a 'portrait' oriented screen (ie taller than wide), which should further guide your layout choices.
+
+```{r}
+order_df <- inc %>% group_by(State) %>% summarise(n=n()) %>% arrange(desc(n))
+```
+
+
+```{r}
+plt <- 
+  ggplot(data = order_df[1:52,], aes(x=reorder(State,n), y=n)) + 
+  geom_bar(stat="identity", width=0.5, color="#1F3552", fill="steelblue", 
+           position=position_dodge()) +
+    #geom_text(aes(label=round(n, digits=2)), hjust=1.3, size=3.0, color="white") + 
+    coord_flip() + 
+    scale_y_continuous(breaks=seq(0,700,100)) + 
+    ggtitle("Disbribution by State") +
+    xlab("") + ylab("") + 
+    theme_minimal()
+```
+
+```{r}
+plt
+```
+
+
+## Quesiton 2
+
+Lets dig in on the state with the 3rd most companies in the data set. Imagine you work for the state and are interested in how many people are employed by companies in different industries. Create a plot that shows the average and/or median employment by industry for companies in this state (only use cases with full data, use R's `complete.cases()` function.) In addition to this, your graph should show how variable the ranges are, and you should deal with outliers.
+
+```{r}
+df <- inc %>% 
+    group_by(State) %>% 
+    summarise(bizCount = n()) %>% 
+    arrange(desc(bizCount))
+```
+
+```{r}
+states2 <- toString(df$State[3])
+```
+
+```{r}
+df1 <- inc %>% 
+    filter(State == states2) %>% 
+    filter(complete.cases(.)) %>% 
+    group_by(Industry) %>% 
+    summarise(indMean = mean(Employees),
+              indMed = median(Employees)) %>% 
+    gather(statType, Amount, indMean, indMed)
+```
+
+
+
+```{r}
+ggplot(data = df1, aes(x = Industry, y = Amount)) +
+    geom_bar(stat = 'identity', aes(fill = statType), position = 'dodge') +
+    scale_fill_manual(values = c('deepskyblue2', 'deepskyblue4'))+
+    geom_hline(yintercept=seq(1, 1500, 100), col="white", lwd=0.5) +
+    theme_tufte() +
+    coord_flip()
+```
+
+## Question 3
+
+Now imagine you work for an investor and want to see which industries generate the most revenue per employee. Create a chart that makes this information clear. Once again, the distribution per industry should be shown.
+
+```{r}
+df2 <- inc %>% 
+    filter(State == states2) %>% 
+    filter(complete.cases(.)) %>% 
+    mutate(RevPerEmp = (Revenue / Employees)/1000) %>% 
+    group_by(Industry) %>% 
+    summarise(Mean = mean(RevPerEmp))
+```
+
+
+
+
+```{r}
+ggplot(data = df2, aes(x = Industry, y = Mean)) +
+    geom_bar(stat = 'identity', fill = "#FF6666") +
+    theme_tufte()+
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+    geom_hline(yintercept=seq(1, 9000, 1000), col="forestgreen", lwd=0.5) +
+    ylab('Revenue/Employee ,000 $')
+```
