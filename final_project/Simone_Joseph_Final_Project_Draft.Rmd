@@ -1,0 +1,95 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tigris)
+library(dplyr)
+library(leaflet)
+```
+
+```{r}
+
+all <- readRDS("GV_GeoData.rds")
+
+
+m <- leaflet(all) %>%
+    addTiles('http://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', 
+             attribution='Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>') %>%  # Add default OpenStreetMap map tiles
+    addCircles(lng=~lon, lat=~lat, 
+               weight=all$Killed,
+               popup=all$Content,
+               stroke = TRUE, 
+               fillOpacity = 0.8) 
+m
+```
+
+
+
+```{r}
+# Downloading the shapefiles for states at the lowest resolution
+states <- states(cb=T)
+```
+
+```{r}
+unique(gv_df$State)
+
+```
+
+
+```{r}
+sb_state <- gv_df %>%
+     group_by(State) %>%
+     summarize(total=n())%>% 
+     rename(state=State)
+```
+
+```{r}
+states_merged_sb <- geo_join(states, sb_state, "NAME", "state")
+```
+```{r}
+
+```
+
+
+```{r}
+# Creating a color palette based on the number range in the total column
+bins <- c(0, 10, 20, 50, 60)
+pal <- colorBin("YlOrRd", domain = states$density, bins = bins)
+
+# Getting rid of rows with NA values
+# Using the Base R method of filtering subset() because we're dealing with a SpatialPolygonsDataFrame and not a normal data frame, thus filter() wouldn't work
+
+states_merged_sb <- subset(states_merged_sb, !is.na(total))
+
+# Setting up the pop up text
+popup_sb <- paste0("Total Incidents: ", as.character(states_merged_sb$total))
+```
+
+
+
+
+
+
+
+```{r}
+leaflet() %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  setView(-98.483330, 38.712046, zoom = 4) %>% 
+  addPolygons(data = states_merged_sb , 
+              fillColor = ~pal(states_merged_sb$total), 
+              fillOpacity = 0.7, 
+              weight = 0.2, 
+              smoothFactor = 0.2, 
+              popup = ~popup_sb) %>%
+  addLegend(pal = pal, 
+            values = states_merged_sb$total, 
+            position = "bottomright", 
+            title = "Total<br />Incidents<br/>per State")
+```
+

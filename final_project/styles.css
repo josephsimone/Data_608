@@ -1,0 +1,13 @@
+body {
+  background-color: lightblue;
+  color: blue;
+}
+
+#nextsteps {
+   color: blue;
+   background-color: lightblue;
+}
+
+.emphasized {
+   font-size: 1.2em;
+}

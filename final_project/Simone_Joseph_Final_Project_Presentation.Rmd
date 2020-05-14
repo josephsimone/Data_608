@@ -1,0 +1,122 @@
+---
+title: 'US Gun Violence Archive Application'
+author: "Joseph Simone"
+subtitle: "Data 608 - Final Project"
+date: "5/11/20"
+output: 
+  slidy_presentation:
+    css: styles.css
+    font_adjustment: -1
+    footer: CUNY SPS MSDS DATA 608
+    highlight: pygments
+    transition: slower
+
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(leaflet)
+library(tigris)
+library(ggmap)
+google <- "AIzaSyDDmdGqnw9L5aRvlK3DzwZOSv1YF0Di3_s"
+register_google(key = google)
+```
+
+## Background 
+
+Gun Violence Archive (GVA) is a not for profit corporation formed in 2013 to provide online public access to accurate information about gun-related violence in the United States. GVA will collect and check for accuracy, comprehensive information about gun-related violence in the  U.S. and then post and disseminate it online, primarily if not exclusively on this website and summary ledgers at www.facebook.com/gunviolencearchive. It is hoped that this information will inform and assist those engaged in discussions and activities concerning gun violence, including analysis of proposed regulations or legislation relating to gun safety usage. All we ask is to please provide proper credit for use of Gun Violence Archive data and advise us of its use.  GVA is not, by design an advocacy group. The mission of GVA is to document incidents of gun violence and gun crime nationally to provide independent, verified data to those who need to use it in their research, advocacy or writing.
+
+
+## The Data 
+
+The Gun Violenece Archive produces Standard Reports, in a form of .CSV, that change from 'Children Killed' to 'Mass Shootings - All Year'.
+
+This project will be using the 'Mass Shootings - All Year' Standard Report.
+
+There are about roughly 1100 observations in this dataset.  
+
+[Standard Reports](https://www.gunviolencearchive.org/reports)
+
+```{r}
+gv_df <- read.csv(paste0("https://raw.githubusercontent.com/josephsimone/Data_608/master/final_project/gv_archive.csv"))
+```
+
+
+## Libraries
+
+Package Libraries are the key to any great projects. For this particular one, the utlization of the following packages were key in achieving not only achieved the vizualization of the data but the tidying and geocoding as well.
+
+* `ggmap`
+  + A collection of functions to visualize spatial data with ggplot2 and modelson top of static maps from various online sources, such as Google. It includes tools common to those tasks, including functions for geolocation and routing.
+* `dplyr`
+  + A set of tools for efficiently manipulating datasets in R.
+* `tigris`
+  + Download TIGER/Line shapefiles from the United States Census Bureau and load into R as 'SpatialDataFrame' or 'sf' objects.
+* `leaflet`
+  + An interface to the JavaScript library used to create interactive web maps.
+* `xts`
+  + Constructor function for creating an extensible time-series object.
+* `RColorBrewer`
+  + Provides color schemes for maps. 
+* `shiny`
+  + R package that makes it easy to build interactive web applications.
+
+## Geocoding 
+
+Geocoding is the process of converting addresses (like a street address) into geographic coordinates (like latitude and longitude), which you can use to place markers on a map, or position the map.
+
+```{r, message=FALSE, warning=FALSE}
+gv_df$FullAddress <- paste0(gv_df$Address, ", ", gv_df$City.Or.County, ", ", gv_df$State)
+add_lola <- geocode(gv_df$FullAddress, override_limit=TRUE)
+```
+
+## Tidying
+
+The handling of the data below, for the Choropleth Map, is to determine the about of Mass Shooting Incidents. 
+
+```{r}
+sb_state <- gv_df %>%
+     group_by(State) %>%
+     summarize(total=n())%>% 
+     rename(state=State)
+
+head(sb_state, 3)
+```
+
+
+## Geojoin
+
+From the `tigris` package, the function `geo_join` is the easiest way to merge a data-frame into spatial data frame.
+
+```{r}
+states_merged_sb <- geo_join(states, sb_state, "NAME", "state")
+```
+
+## Shape File 
+
+A shapefile is a simple, nontopological format for storing the geometric location and attribute information of geographic features. Geographic features in a shapefile can be represented by points, lines, or polygons (areas). 
+
+```{r, message=FALSE, warning=FALSE}
+states <- states(cb=T)
+```
+
+
+## US Maps
+
+Both of the maps that are encompassed in the final application utilize the `leaflet` package. However, each of the maps are different, in what they are displaying to the user.<br>
+The animated map is a Time-Series Cluster map with a running total of either the amount Killed or Injured, depending on what the user selects. <br>
+On the other hand he purely interactive map is a Choropleth Map with zooming, paning, and tip tools for interconnectivity. 
+
+## Application
+
+[US Gun Violence Archive Application](https://jpsimone.shinyapps.io/Data608_Final_Project/)
+
+## References  
+
+[Mapping in R](https://andrewbtran.github.io/NICAR/2017/maps/leaflet-r.html#how_to_put_the_map_online)
+
+[Leaflet R](https://rstudio.github.io/leaflet/shiny.html)
+
+[Shiny-R SuperZip Example](https://github.com/rstudio/shiny-examples/tree/master/063-superzip-example)

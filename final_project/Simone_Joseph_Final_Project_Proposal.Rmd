@@ -1,0 +1,155 @@
+---
+title: "Data 608 - Knowledge and Visual Analytics"
+author: "Joseph Simone"
+date: "3/22/20"
+subtitle: "Final Project Proposal"
+output:
+    html_document:
+    df_print: paged
+    toc: true
+    toc_float:
+      collapsed: true
+      smooth_scroll: true
+    theme: cerulean
+    highlight: pygments
+---
+
+<STYLE>
+table {
+    border: 1px solid black;
+}
+th {
+    background-color: rgb(12, 99, 204);
+    color: white;
+    font-weight: bold;
+    padding: 20px 30px;
+}
+tr:nth-child(even) {
+    background-color: rgb(220,220,220);
+}
+tr:nth-child(odd) {
+    background-color: rgb(184, 174, 174);
+}
+</STYLE>
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.align="center")
+```
+
+
+```{r, message=FALSE, warning=FALSE}
+library(plyr)
+library(dplyr)
+library(ggmap)
+library(plotly)
+```
+
+
+## Thesis
+
+Create a visualization that would show an accurate representations where gun violence in the United State occurs from 2018 until the most reported case through 2020 using the data provided by the Gun Violence Archive(GVA).  
+
+## Gun Violence Archive
+[The Gun Violence Archive](http://www.gunviolencearchive.org/methodology)
+
+The Gun Violence Archive is an online archive of gun violence incidents collected from over 7,500  law enforcement, media, government and commercial sources daily in an effort to provide near-real time data about the results of gun violence. GVA is an independent data collection and research group with no affiliation with any advocacy organization.
+
+Mission Statement
+Gun Violence Archive (GVA) is a not for profit corporation formed in 2013 to provide free online public access to accurate information about gun-related violence in the United States. GVA will collect and check for accuracy, comprehensive information about gun-related violence in the U.S. and then post and disseminate it online, primarily if not exclusively on this website and summary ledgers at www.facebook.com/gunviolencearchive and on Twitter @gundeaths. It is hoped that this information will inform and assist those engaged in discussions and activities concerning gun violence, including analysis of proposed regulations or legislation relating to gun safety usage. All we ask is to please provide proper credit for use of Gun Violence Archive data and advise us of its use.
+
+GVA is not, by design an advocacy group. The mission of GVA is to document incidents of gun violence and gun crime nationally to provide independent, verified data to those who need to use it in their research, advocacy or writing.
+
+## Data Source
+
+[Standard Reports](https://www.gunviolencearchive.org/reports)
+
+The Gun Violenece Archive produces Standard Reports, in a form of .CSV, that change from 'Cildren Killed' to 'Mass Shootings - All Year'.
+
+This project will be using the 'Mass Shootings - All Year' Standard Report.
+
+There are about roughly 1100 observations in this dataset.  
+
+
+## Data Import 
+
+```{r}
+gv_df <- read.csv(paste0("https://raw.githubusercontent.com/josephsimone/Data_608/master/final_project/gv_archive.csv"))
+```
+
+
+
+## Aquiring Latidue and Longitude from Street Addresses using `ggmap`
+
+```{r, message=FALSE, warning=FALSE}
+#register_google(key = google)
+gv_df$FullAddress <- paste0(gv_df$Address, ", ", gv_df$City.Or.County, ", ", gv_df$State)
+add_lola <- geocode(gv_df$FullAddress, override_limit=TRUE)
+```
+
+
+```{r, message=FALSE, warning=FALSE}
+gv_df <- cbind(gv_df, add_lola)
+```
+
+
+```{r}
+gv_df <- select(gv_df,Incident.ID, Incident.Date, FullAddress, lat, lon, X..Killed, X..Injured)
+names(gv_df) <- c("ID","Date", "Address", "lat", "lon", "Killed", "Injured")
+```
+
+
+## Data Aggregation
+
+```{r}
+gv_df$Date <- as.Date(gv_df$Date, format="%B %d, %Y")
+gv_df <- gv_df[order(gv_df$Date), ]
+```
+
+
+```{r}
+gv_df$Content <- paste0("<b>Date: </b>", gv_df$Date, "<br/>",
+                      "<b>Killed: </b>", gv_df$Killed, "<br/>",
+                      "<b>Injured: </b>", gv_df$Injured, "<br/>",
+                      "<b>Location: </b>", gv_df$Address)
+```
+
+## Data Export 
+```{r}
+# Complete Cases
+complete <- complete.cases(gv_df)
+completedf <- gv_df[complete,]
+```
+
+
+
+```{r}
+#saveRDS(completedf, "GV_GeoData.rds")
+
+```
+
+
+
+
+## Final Project
+### Data Visualization
+
+
+This project will be a R `shiny` application to display various interactive United States maps and an "About Me" Page for the Gun Violence Archive. 
+
+
+#### First Page
+Using the `leaflet` package for the first time to use as a base for a Time Series Map of the United States. In previous course I have used the `fiftystater` package to create static maps of the United States.
+
+For the animation of the `leaflet` map, I hope to use the `xts` package to span the time duration of this dataset. 
+
+#### Second Page 
+
+Using the `plotly` package, for each year starting with 2014, create interactive map of the United States with the amount of gun violent related incidents for each state. 
+
+#### Third Page 
+ About Me Page for the Gun Violence Archive.
+
+#### Additional Resources 
+I would like to explore the use of saving my comleted data set as a Amazon Relational Database Service for the deployment of this visualization.
+
